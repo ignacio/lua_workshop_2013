@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Server Sent Events Demo</title>
+</head>
+<body>
+
+<p>Status: <span id="status">Connecting...</span></p>
+<p>Current Time: <span id="current_time"></span></p>
+
+<p>Amplitude: <span id="amplitude"></span></p>
+
+<canvas id="mycanvas" width="200" height="200">
+    Your browser is not supported.
+</canvas>
+</body>
+
+<script type="text/javascript">
+var canvas = document.getElementById("mycanvas");
+var points = {};
+var counter = 0;
+
+var amplitude = 1;
+var frequency = 0.01;
+
+function f(x) {
+	return amplitude * Math.sin(2 * Math.PI * 1/50 * x ) + 100;
+}
+
+if (canvas.getContext) {
+	var ctx = canvas.getContext("2d");
+	ctx.lineWidth = 3;
+	var x = 0,
+		y = f(0);
+	var timeout = setInterval(function() {
+		if(counter < 200) {
+			ctx.beginPath();
+			ctx.moveTo(x, y);
+			x += 1;
+			y = f(x);
+			points[x] = y;
+			ctx.lineTo(x, y);
+			ctx.stroke();
+			if (x > 1000) {
+				clearInterval(timeout);
+			}
+		} else {
+			ctx.clearRect(0, 0, 200, 200);
+			ctx.beginPath();
+			points[x] = y;
+			x += 1;
+			y = f(x);
+			for(var i = 0; i < 200; i++) {
+				ctx.lineTo(i, points[i + counter - 200]);
+			}
+			ctx.stroke();
+		}
+		counter++;
+	}, 10);
+}
+
+var source = new EventSource('/time');
+source.onopen = function () {
+	console.log("connection open");
+	document.getElementById("status").innerHTML = "Connection open";
+};
+
+source.onerror = function () {
+	document.getElementById("status").innerHTML = "Connection closed";
+};
+
+source.onmessage = function (e) {
+  document.getElementById("current_time").innerHTML = e.data;
+};
+
+
+var stream = new EventSource('/stream');
+
+stream.addEventListener("amplitude", function(e) {
+	amplitude = e.data;
+	document.getElementById("amplitude").innerHTML = amplitude;
+});
+</script>
+</html>
